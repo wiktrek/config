@@ -1,8 +1,9 @@
-use std::{fs, path::PathBuf};
-use console::style;
+use std::fs;
+// use console::style;
 use dialoguer::{theme::ColorfulTheme, FuzzySelect};
 use std::path::Path;
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 #[derive(Deserialize, Serialize)]
 struct Config {
     path: String,
@@ -13,7 +14,7 @@ fn main() {
     println!("Config loaded successfully");
     list_projects(cfg);
 }
-fn load_projects(cfg: Config) -> Vec<String> {
+fn load_projects(cfg: &Config) -> Vec<String> {
     let a = fs::read_dir(cfg.path.clone()).unwrap()
         .map(|res| res.map(|e| e.path()))
         .collect::<Vec<_>>();
@@ -28,14 +29,18 @@ fn load_projects(cfg: Config) -> Vec<String> {
     paths
 }
 fn list_projects(cfg: Config) {
-    let vec = load_projects(cfg);
+    let vec = load_projects(&cfg);
     let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Pick")
         .default(0)
         .items(&vec[..])
         .interact()
         .unwrap();
-    println!("Enjoy your {}!", vec[selection]);
+    open_project(format!("{}/{}", cfg.path, vec[selection]));
+}
+fn open_project(path: String) {
+    println!("{}", &format!("code {}", path.replace("/", "\\")));
+    Command::new("cmd").args(["/C",&format!("code {}", path.replace("/", "\\"))]).status().expect("err");
 }
 fn load_config() -> Config {
     serde_json::from_str(&fs::read_to_string("config.json").expect("Error reading config.json")).unwrap()
