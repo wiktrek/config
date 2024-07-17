@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, str::FromStr};
 // use console::style;
 use dialoguer::{theme::ColorfulTheme, FuzzySelect};
 use std::path::Path;
@@ -19,7 +19,7 @@ fn load_projects(cfg: &Config) -> Vec<String> {
     let a = fs::read_dir(cfg.path.clone()).unwrap()
         .map(|res| res.map(|e| e.path()))
         .collect::<Vec<_>>();
-    let mut paths: Vec<String> = vec![];
+    let mut paths: Vec<String> = vec!["../".to_string()];
     for i in a {
         let p = i.unwrap();
         if Path::new(&p).is_dir() {
@@ -37,6 +37,20 @@ fn list_projects(cfg: Config) {
         .items(&vec[..])
         .interact()
         .unwrap();
+
+    println!("{}{}", selection, vec.len());
+    if selection == 0{
+        let replaced_path = cfg.path.clone().replace("//", "/");
+        let mut p = replaced_path.split("/").collect::<Vec<&str>>();
+        p.pop();
+        if p.len() == 1 {
+            return list_projects(load_config())
+        }
+        return list_projects(Config {
+            path: p.join("/"),
+            editor: cfg.editor,
+        })
+    } else {
     let open_or_browse = FuzzySelect::with_theme(&ColorfulTheme::default())
         .with_prompt("")
         .default(0)
@@ -55,9 +69,9 @@ fn list_projects(cfg: Config) {
         2 => open_explorer(format!("{}/{}", cfg.path, vec[selection])),
         _ => println!("Error")
     }
+    }
 }
 fn open_project(cfg: Config) {
-    // println!("{}", &format!("{} {}", cfg.editor, cfg.path.replace("/", "\\")));
     Command::new("cmd").args(["/C",&format!("{} {}", cfg.editor, cfg.path.replace("/", "\\"))]).status().expect("err");
 }
 fn open_explorer(path: String){
