@@ -7,6 +7,7 @@ use std::process::Command;
 #[derive(Deserialize, Serialize)]
 struct Config {
     path: String,
+    editor: String,
 }
 fn main() {
     println!("Loading config...");
@@ -36,11 +37,31 @@ fn list_projects(cfg: Config) {
         .items(&vec[..])
         .interact()
         .unwrap();
-    open_project(format!("{}/{}", cfg.path, vec[selection]));
+    let open_or_browse = FuzzySelect::with_theme(&ColorfulTheme::default())
+        .with_prompt("")
+        .default(0)
+        .items(&["editor", "browse", "file explorer"])
+        .interact()
+        .unwrap();
+    match open_or_browse {
+        0 => open_project(Config {
+            path: format!("{}/{}", cfg.path, vec[selection]),
+            editor: cfg.editor,
+        }),
+        1 => list_projects(Config {
+            path: format!("{}//{}", cfg.path,vec[selection]),
+            editor: cfg.editor,
+        }),
+        2 => open_explorer(format!("{}/{}", cfg.path, vec[selection])),
+        _ => println!("Error")
+    }
 }
-fn open_project(path: String) {
-    println!("{}", &format!("code {}", path.replace("/", "\\")));
-    Command::new("cmd").args(["/C",&format!("code {}", path.replace("/", "\\"))]).status().expect("err");
+fn open_project(cfg: Config) {
+    // println!("{}", &format!("{} {}", cfg.editor, cfg.path.replace("/", "\\")));
+    Command::new("cmd").args(["/C",&format!("{} {}", cfg.editor, cfg.path.replace("/", "\\"))]).status().expect("err");
+}
+fn open_explorer(path: String){
+    open::that(path).unwrap();
 }
 fn load_config() -> Config {
     serde_json::from_str(&fs::read_to_string("config.json").expect("Error reading config.json")).unwrap()
